@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SHAZZ BOTS - Emote & TCP Bot</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root{
+  --bg: #050816;
+  --bg-alt: #070b16;
+  --card: #0b0b10;
+  --accent: #ef4444;
+  --accent-2:#b91c1c;
+  --text:#f8fafc;
+  --muted:#94a3b8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background: radial-gradient(circle at top, #111827 0, #020617 60%, #000 100%);
+  color:var(--text);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+
+/* Toast */
+#toast{
+  position:fixed;
+  top:12px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(15,23,42,.98);
+  border-radius:999px;
+  padding:10px 18px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#e5e7eb;
+  font-size:14px;
+  box-shadow:0 18px 45px rgba(0,0,0,.7);
+  opacity:0;
+  pointer-events:none;
+  transition:.25s ease;
+  z-index:99999;
+}
+#toast.show{
+  opacity:1;
+  transform:translateX(-50%) translateY(4px);
+}
+#toast.success{border:1px solid rgba(74,222,128,.6);}
+#toast.error{border:1px solid rgba(248,113,113,.7);}
+#toast i{font-size:15px;}
+#toast.success i{color:#4ade80;}
+#toast.error i{color:#f97373;}
+
+/* Verify screen */
+#verify-screen,
+#login-screen{
+  position:fixed;
+  inset:0;
+  background:radial-gradient(circle at top,rgba(15,23,42,.9),rgba(2,6,23,.98));
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+#verify-box,#login-box{
+  width:100%;
+  max-width:420px;
+  background:linear-gradient(145deg,rgba(15,15,20,.96),rgba(10,10,15,.98));
+  border-radius:20px;
+  border:1px solid rgba(148,163,184,.3);
+  box-shadow:0 24px 80px rgba(0,0,0,.95);
+  padding:22px 20px 20px;
+  animation:popIn .28s ease;
+}
+#verify-box h2,#login-box h2{
+  color:var(--accent);
+  text-align:center;
+  margin-bottom:6px;
+  font-size:20px;
+}
+#verify-box p.hint,#login-box p.hint{
+  text-align:center;
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:12px;
+}
+
+/* App container */
+.container{
+  width:100%;
+  max-width:1100px;
+  background:linear-gradient(135deg,#020617,#02030a);
+  border-radius:22px;
+  border:1px solid rgba(248,113,113,.25);
+  box-shadow:0 30px 90px rgba(0,0,0,.9);
+  padding:20px 18px 18px;
+}
+header .logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:12px;
+}
+header .logo i{
+  width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:14px;
+  background:radial-gradient(circle at 30% 0,#7f1d1d,#b91c1c);
+  color:#fee2e2;
+  font-size:18px;
+  box-shadow:0 12px 35px rgba(248,113,113,.7);
+}
+header h1{
+  font-size:20px;
+  letter-spacing:.04em;
+}
+
+/* Page tabs (Emote Bot / TCP Bot) */
+.page-tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+.page-tab{
+  flex:1;
+  padding:7px 0;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.5);
+  background:rgba(15,23,42,.9);
+  font-size:12px;
+  color:var(--muted);
+  cursor:pointer;
+  text-align:center;
+}
+.page-tab span{
+  font-weight:600;
+}
+.page-tab.active{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#f9fafb;
+  border-color:rgba(248,113,113,.9);
+  box-shadow:0 0 0 1px rgba(127,29,29,.7);
+}
+
+.row{
+  display:grid;
+  grid-template-columns:1.2fr 1.1fr;
+  gap:14px;
+}
+@media (max-width:900px){
+  .row{grid-template-columns:1fr;}
+}
+.card{
+  background:radial-gradient(circle at top left,#020617 0,#000 55%);
+  border-radius:18px;
+  border:1px solid rgba(148,163,184,.3);
+  padding:15px 14px 14px;
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background:radial-gradient(circle at top,#7f1d1d 0,transparent 60%);
+  opacity:.18;
+  pointer-events:none;
+}
+
+/* Card header */
+.card-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:10px;
+}
+.card-header i{
+  width:26px;height:26px;
+  border-radius:999px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(248,113,113,.18);
+  color:#fecaca;
+  font-size:14px;
+}
+.card-header h3{
+  font-size:15px;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+}
+
+/* Form controls */
+.form-group{margin-bottom:10px;}
+.form-group label{
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:5px;
+}
+.form-control{
+  width:100%;
+  background:rgba(10,10,15,.96);
+  border-radius:12px;
+  border:1px solid rgba(148,163,184,.45);
+  color:var(--text);
+  padding:9px 11px;
+  font-size:13px;
+  outline:none;
+}
+.form-control:focus{
+  border-color:rgba(248,113,113,.9);
+  box-shadow:0 0 0 1px rgba(248,113,113,.75);
+}
+.uid-row{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+@media (max-width:600px){
+  .uid-row{grid-template-columns:1fr;}
+}
+
+/* Emote buttons */
+.emote-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:8px;
+  max-height:320px;
+  overflow:auto;
+  padding-right:3px;
+}
+.emote-btn{
+  background:linear-gradient(135deg,#020617,#111827);
+  border-radius:12px;
+  border:1px solid rgba(148,163,184,.4);
+  padding:9px 9px 8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:12px;
+  color:#e5e7eb;
+  cursor:pointer;
+  position:relative;
+  overflow:hidden;
+}
+.emote-main{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.emote-main img{
+  width:32px;
+  height:32px;
+  border-radius:6px;
+  object-fit:cover;
+}
+.emote-main-text{
+  display:flex;
+  flex-direction:column;
+}
+.emote-main-text span{
+  font-size:11px;
+  color:var(--muted);
+}
+.emote-btn strong{
+  font-size:12px;
+}
+.emote-btn i.fa-bolt{
+  font-size:13px;
+  color:#facc15;
+}
+.emote-btn:hover{
+  border-color:rgba(248,113,113,.9);
+  box-shadow:0 0 0 1px rgba(248,113,113,.7);
+  transform:translateY(-1px);
+}
+.emote-btn.btn-loading{
+  opacity:.7;
+  pointer-events:none;
+}
+
+/* Section title */
+.section-title{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+.section-title h4{
+  font-size:13px;
+}
+.section-title span{
+  font-size:11px;
+  color:var(--muted);
+}
+
+/* Tabs (Evo / Normal) */
+.tab-row{
+  display:flex;
+  gap:6px;
+  margin-bottom:8px;
+}
+.tab-btn{
+  flex:1;
+  padding:6px 0;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.45);
+  background:rgba(10,10,15,.96);
+  font-size:11px;
+  color:var(--muted);
+  cursor:pointer;
+}
+.tab-btn.active{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#f9fafb;
+  border-color:transparent;
+}
+
+/* Small info pill */
+.info-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+  padding:5px 8px;
+  border-radius:999px;
+  background:rgba(10,10,15,.96);
+  border:1px solid rgba(148,163,184,.45);
+  color:var(--muted);
+}
+.info-pill i{
+  font-size:12px;
+  color:#f97373;
+}
+
+/* TCP bot buttons */
+.tcp-btn{
+  width:100%;
+  margin-top:6px;
+  padding:9px 10px;
+  border-radius:12px;
+  border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#fff;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+}
+.tcp-note{
+  font-size:11px;
+  color:var(--muted);
+  margin-top:5px;
+}
+
+/* Scrollbar */
+.emote-list::-webkit-scrollbar{width:5px;}
+.emote-list::-webkit-scrollbar-thumb{
+  background:rgba(148,163,184,.7);
+  border-radius:999px;
+}
+
+/* Simple animation */
+@keyframes popIn{
+  from{transform:translateY(8px) scale(.96);opacity:0;}
+  to{transform:translateY(0) scale(1);opacity:1;}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"><i class="fa-solid fa-circle-info"></i><span></span></div>
+
+<!-- VERIFY SCREEN (first step) -->
+<div id="verify-screen" aria-hidden="false">
+  <div id="verify-box" role="dialog" aria-label="Verify to continue">
+    <h2>Verify & Continue</h2>
+    <p class="hint" style="margin-bottom:12px;">
+      Sab channels join karo phir niche <b>Verify</b> dabao.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+
+      <!-- YOUTUBE BUTTON -->
+      <a href="https://youtube.com/@xshazz?si=rMLzJG3j2pxV_sXa" target="_blank"
+         style="background:#ff0000;padding:12px;text-align:center;color:white;
+         font-weight:700;border-radius:10px;text-decoration:none;display:block;">
+        🔔 SUBSCRIBE YOUTUBE
+      </a>
+
+      <!-- TELEGRAM BUTTON -->
+      <a href="https://t.me/XSHAAZZ" target="_blank"
+         style="background:#0088cc;padding:12px;text-align:center;color:white;
+         font-weight:700;border-radius:10px;text-decoration:none;display:block;">
+        🚀 Join Telegram
+      </a>
+
+      <!-- WHATSAPP CHANNEL -->
+      <a href="https://whatsapp.com/channel/0029VaCgawK9WtC2yir4kL35" target="_blank"
+         style="background:#25D366;padding:12px;text-align:center;color:white;
+         font-weight:700;border-radius:10px;text-decoration:none;display:block;">
+        💬 WhatsApp Channel
+      </a>
+
+      <!-- INSTAGRAM -->
+      <a href="https://www.instagram.com/lsahilxx?igsh=MTB3azUzYTljdnUzcA==" target="_blank"
+         style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+         padding:12px;text-align:center;color:white;font-weight:700;
+         border-radius:10px;text-decoration:none;display:block;">
+        📸 Instagram
+      </a>
+
+      <!-- INSTAGRAM 2 -->
+      <a href="https://www.instagram.com/5hazzzzz?igsh=MTgxZTZmNGh6ZnVkbg==" target="_blank"
+         style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);
+         padding:12px;text-align:center;color:white;font-weight:700;
+         border-radius:10px;text-decoration:none;display:block;">
+        📸 Instagram 2
+      </a>
+
+      <!-- DISCORD -->
+      <a href="https://discord.gg/JWxtCfWBd" target="_blank"
+         style="background:#5865F2;padding:12px;text-align:center;color:white;
+         font-weight:700;border-radius:10px;text-decoration:none;display:block;">
+        🎧 Join Discord
+      </a>
+
+    </div>
+
+    <button id="verify-btn"
+            style="width:100%;padding:12px;border-radius:10px;border:none;
+                   background:linear-gradient(135deg,var(--accent),var(--accent-2));
+                   color:#fff;font-weight:700;cursor:pointer;">
+      ✅ I Have Joined - Verify
+    </button>
+
+    <p class="hint" style="margin-top:10px;">
+      Note: Har <b>2 ghante</b> ke baad dobara verify karna padega.
+    </p>
+  </div>
+</div>
+
+<div class="container" id="app" aria-hidden="true">
+  <header>
+    <div class="logo">
+      <i class="fas fa-robot"></i><h1>SHAZZ BOTS</h1>
+    </div>
+
+    <!-- PAGE SWITCH: EMOTE BOT / TCP BOT -->
+    <div class="page-tabs">
+      <button class="page-tab active" data-page="emote">
+        <span>Emote Bot</span>
+      </button>
+      <button class="page-tab" data-page="tcp">
+        <span>TCP Bot</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- EMOTE BOT PAGE (DEFAULT) -->
+  <div id="page-emote">
+    <div class="row">
+      <!-- TEAM CODE + REGION -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-code"></i><h3>Team Code</h3>
+        </div>
+
+        <!-- Region select -->
+        <div class="form-group">
+          <label>Region</label>
+          <select id="region" class="form-control">
+            <option value="ind" selected>IND Server</option>
+            <option value="bd">BD Server</option>
+            <option value="pak">PAK Server</option>
+          </select>
+        </div>
+
+        <!-- Team code input -->
+        <div class="form-group">
+          <label>Team Code</label>
+          <input id="teamcode" class="form-control" placeholder="Enter Team Code" />
+        </div>
+
+        <!-- UID inputs -->
+        <div class="form-group">
+          <label>Player UIDs (max 5)</label>
+          <div class="uid-row">
+            <input id="uid1" class="form-control" placeholder="UID 1 (required)" />
+            <input id="uid2" class="form-control" placeholder="UID 2 (optional)" />
+            <input id="uid3" class="form-control" placeholder="UID 3 (optional)" />
+            <input id="uid4" class="form-control" placeholder="UID 4 (optional)" />
+            <input id="uid5" class="form-control" placeholder="UID 5 (optional)" />
+          </div>
+        </div>
+
+        <p class="hint" style="font-size:11px;color:var(--muted);margin-top:4px;">
+          Tip: Pehle sirf ek UID se test karo, phir baaki players add karo.
+        </p>
+
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
+          <div class="info-pill">
+            <i class="fa-solid fa-shield-heart"></i>
+            <span>No password / login needed</span>
+          </div>
+          <span style="font-size:10px;color:var(--muted);">
+            API by SHAZZ
+          </span>
+        </div>
+      </div>
+
+      <!-- EMOTES -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-fire"></i><h3>Emotes</h3>
+        </div>
+
+        <div class="section-title">
+          <h4>Select Emote</h4>
+          <span>Click to send</span>
+        </div>
+
+        <div class="tab-row">
+          <button class="tab-btn active" data-tab="evo">Evo Emotes</button>
+          <button class="tab-btn" data-tab="normal">Normal Emotes</button>
+        </div>
+
+        <div id="tab-evo" class="emote-list"></div>
+        <div id="tab-normal" class="emote-list" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TCP BOT PAGE -->
+  <div id="page-tcp" style="display:none;">
+    <div class="row">
+      <!-- GROUP MAKER CARD -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-users"></i><h3>TCP Bot - Group Maker</h3>
+        </div>
+
+        <div class="form-group">
+          <label>Region</label>
+          <select id="tcp-region" class="form-control">
+            <option value="ind" selected>IND Server</option>
+            <option value="bd">BD Server</option>
+            <option value="pak">PAK Server</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Player UID</label>
+          <input id="tcp-uid" class="form-control" placeholder="Enter UID (player)" />
+        </div>
+
+        <button class="tcp-btn" id="btn-5group">
+          ⚔️ Send 5 Player Group
+        </button>
+        <button class="tcp-btn" id="btn-6group" style="margin-top:8px;">
+          🛡️ Send 6 Player Group
+        </button>
+
+        <p class="tcp-note">
+          Click karne ke baad popup: <b>We send your request, open game and join 5/6 group.</b>
+        </p>
+      </div>
+
+      <!-- LAG SECTION CARD -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-bolt"></i><h3>TCP Bot - Lag</h3>
+        </div>
+
+        <div class="form-group">
+          <label>Region</label>
+          <select id="lag-region" class="form-control">
+            <option value="ind" selected>IND Server</option>
+            <option value="bd">BD Server</option>
+            <option value="pak">PAK Server</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Team Code</label>
+          <input id="lag-teamcode" class="form-control" placeholder="Enter Team Code" />
+        </div>
+
+        <button class="tcp-btn" id="btn-lag">
+          🔥 Send Lag Request
+        </button>
+
+        <p class="tcp-note">
+          Click karte hi popup: <b>Laging teamcode, open game and join.</b>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Data ---------- */
+const EVO_EMOTES = [
+  ["EVO P90","909049010"],
+  ["EVO M60","909051003"],
+  ["EVO MP5","909033002"],
+  ["EVO GROZA","909041005"],
+  ["EVO THOMPSON","909038010"],
+  ["EVO M10 RED","909039011"],
+  ["EVO MP40 BLUE","909040010"],
+  ["EVO M10 GREEN","909000081"],
+  ["EVO XM8","909000085"],
+  ["EVO AK","909000063"],
+  ["EVO MP40","909000075"],
+  ["EVO M4A1","909033001"],
+  ["EVO FAMAS","909000090"],
+  ["EVO SCAR","909000068"],
+  ["EVO UMP","909000098"],
+  ["EVO M18","909035007"],
+  ["EVO FIST","909037011"],
+  ["EVO G18","909038012"],
+  ["EVO AN94","909035012"],
+  ["EVO WOODPECKER","909042008"]
+];
+
+const NORMAL_EMOTES = [
+  ["100 Level","909042007"],
+  ["Hello!","909000001"],
+  ["LOL","909000002"],
+  ["Provoke","909000003"],
+  ["Applause","909000004"],
+  ["Dab","909000005"],
+  ["Chicken","909000006"],
+  ["Arm Wave","909000007"],
+  ["Shoot Dance","909000008"],
+  ["Baby Shark","909000009"],
+  ["Flowers of Love","909000010"],
+  ["Mummy Dance","909000011"],
+  ["Push-up","909000012"],
+  ["Shuffling","909000013"],
+  ["FFWC Throne","909000014"],
+  ["Dragon Fist","909000015"],
+  ["Dangerous Game","909000016"],
+  ["Jaguar Dance","909000017"],
+  ["Threaten","909000018"],
+  ["Shake With Me","909000019"],
+  ["Devil's Move","909000020"],
+  ["Furious Slam","909000021"],
+  ["Moon Flip","909000022"],
+  ["Wiggle Walk","909000023"],
+  ["Battle Dance","909000024"],
+  ["High Five","909000025"],
+  ["Shake It Up","909000026"],
+  ["Glorious Spin","909000027"],
+  ["Crane Kick","909000028"],
+  ["Party Dance","909000029"],
+  ["Jig Dance","909000031"],
+  ["Selfie","909000032"],
+  ["Soul Shaking","909000033"],
+  ["Pirate's Flag","909000034"],
+  ["Healing Dance","909000035"],
+  ["Top DJ","909000036"],
+  ["Death Glare","909000037"],
+  ["Power of Money","909000038"],
+  ["Eat My Dust","909000039"],
+  ["Breakdance","909000040"],
+  ["Kungfu","909000041"],
+  ["Bon Appetit","909000042"],
+  ["Aim; Fire!","909000043"],
+  ["The Swan","909000044"],
+  ["I Heart You","909000045"],
+  ["Tea Time","909000046"],
+  ["Bring It On!","909000047"],
+  ["Why? Oh Why?","909000048"],
+  ["Fancy Hands","909000049"],
+  ["Shimmy","909000051"],
+  ["Doggie","909000052"],
+  ["Challenge On!","909000053"],
+  ["Lasso","909000054"],
+  ["I'm Rich!","909000055"],
+  ["More Practice","909000079"],
+  ["FFWS 2021","909000080"],
+  ["Draco's Soul","909000081"],
+  ["Good Game","909000082"],
+  ["Greetings","909000083"],
+  ["The Walker","909000084"],
+  ["Born of Light","909000085"],
+  ["Mythos Four","909000086"],
+  ["Champion Grab","909000087"],
+  ["Win and Chill","909000088"],
+  ["Hadouken","909000089"],
+  ["Blood Wraith","909000090"],
+  ["Big Smash","909000091"],
+  ["Fancy Steps","909000092"],
+  ["All In Control","909000093"],
+  ["Debugging","909000094"],
+  ["Waggor Wave","909000095"],
+  ["Crazy Guitar","909000096"],
+  ["Poof","909000097"],
+  ["The Chosen Victor","909000098"],
+  ["Challenger","909000099"],
+  ["Party Game Emote 5","909000100"],
+  ["Party Game Emote 6","909000101"],
+  ["Party Game Emote 3","909000102"],
+  ["Party Game Emote 4","909000103"],
+  ["Party Game Emote 7","909000104"],
+  ["Party Game Emote 1","909000105"],
+  ["Party Game Emote 8","909000106"],
+  ["Party Game Emote 2","909000107"],
+  ["Greeting (Special)","909000108"],
+  ["Greeting (Special)","909000109"],
+  ["Greeting (Special)","909000110"],
+  ["Greeting (Special)","909000111"],
+  ["Greeting (Special)","909000112"],
+  ["Greeting (Special)","909000113"],
+  ["Greeting (Special)","909000114"],
+  ["Greeting (Special)","909000115"],
+  ["Greeting (Special)","909000116"],
+  ["Greeting (Special)","909000117"],
+  ["Greeting (Special)","909000118"],
+  ["Greeting (Special)","909000119"],
+  ["Greeting (Special)","909000120"],
+  ["Greeting (Special)","909000121"],
+  ["Dribble King","909000122"],
+  ["FFWS 2021 Guitar","909000123"],
+  ["Mind it!","909000124"],
+  ["Golden Combo","909000125"],
+  ["Sick Moves","909000126"],
+  ["Rap Swag","909000127"],
+  ["Battle in Style","909000128"],
+  ["Ruler's Flag","909000129"],
+  ["Money Throw","909000130"],
+  ["Endless Bullets","909000131"],
+  ["Smooth Sway","909000132"],
+  ["Number 1","909000133"],
+  ["Fire Slam","909000134"],
+  ["Heartbroken","909000135"],
+  ["Rock Paper Scissors","909000136"],
+  ["Shattered Reality","909000137"],
+  ["Halo of Music","909000138"],
+  ["Burnt BBQ","909000139"],
+  ["Switching Steps","909000140"],
+  ["Creed Slay","909000141"],
+  ["Leap of Fail","909000142"],
+  ["Rhythm Girl","909000143"],
+  ["Helicopter Shot","909000144"],
+  ["Kungfu Tigers","909000145"],
+  ["Possessed Warrior","909000146"],
+  ["Raise Your Thumb!","909000150"],
+  ["Fireborn","909033001"],
+  ["Golden Feather","909033002"],
+  ["Come and Dance","909033003"],
+  ["Drop Kick","909033004"],
+  ["Sit Down!","909033005"],
+  ["BOOYAH Sparks","909033006"],
+  ["The FFWS Dance","909033007"],
+  ["Easy Peasy","909033008"]
+];
+
+/* ---------- Helpers ---------- */
+let toastTimeout;
+function showToast(msg,type='info',time=1800){
+  const el = document.getElementById('toast');
+  const span = el.querySelector('span');
+  const icon = el.querySelector('i');
+  span.textContent = msg;
+  el.className = '';
+  el.classList.add(type === 'success' ? 'success' :
+                   type === 'error' ? 'error' : 'info');
+  icon.className = 'fa-solid ' + (type==='success'
+                    ? 'fa-circle-check'
+                    : type==='error'
+                    ? 'fa-circle-xmark'
+                    : 'fa-circle-info');
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(()=>el.classList.remove('show'),time);
+}
+
+/* ---------- Verify logic (2 hours) ---------- */
+function isVerified(){
+  const exp = localStorage.getItem('shazz_verify_exp');
+  if(!exp) return false;
+  const num = Number(exp);
+  if(Number.isNaN(num)) return false;
+  return num > Date.now();
+}
+
+function setVerifiedForTwoHours(){
+  const twoHoursMs = 2 * 60 * 60 * 1000;
+  const exp = Date.now() + twoHoursMs;
+  localStorage.setItem('shazz_verify_exp', String(exp));
+}
+
+function applyAuthState(){
+  const verified = isVerified();
+  const verifyScreen = document.getElementById('verify-screen');
+  const app = document.getElementById('app');
+
+  if(!verified){
+    sessionStorage.removeItem('shazz_verify_attempt');
+    verifyScreen.style.display = 'flex';
+    verifyScreen.setAttribute('aria-hidden','false');
+    app.setAttribute('aria-hidden','true');
+  } else {
+    verifyScreen.style.display = 'none';
+    verifyScreen.setAttribute('aria-hidden','true');
+    app.setAttribute('aria-hidden','false');
+  }
+}
+
+/* createButton: image + id + name + button */
+function createButton(name,id){
+  const btn = document.createElement('button');
+  btn.className = 'emote-btn';
+  const imgSrc = `images/${id}.png`;
+  btn.innerHTML = `
+    <div class="emote-main">
+      <img src="${imgSrc}" alt="${name}">
+      <div class="emote-main-text">
+        <strong>${name}</strong>
+        <span>ID: ${id}</span>
+      </div>
+    </div>
+    <i class="fa-solid fa-bolt"></i>
+  `;
+  btn.addEventListener('click',()=>handleEmoteClick(btn,id));
+  return btn;
+}
+
+/* Populate emote lists */
+function populateLists(){
+  const evoList = document.getElementById('tab-evo');
+  const normalList = document.getElementById('tab-normal');
+
+  EVO_EMOTES.forEach(([name,id])=>{
+    evoList.appendChild(createButton(name,id));
+  });
+  NORMAL_EMOTES.forEach(([name,id])=>{
+    normalList.appendChild(createButton(name,id));
+  });
+}
+
+/* Emote click handler */
+function handleEmoteClick(button, emoteId){
+  if(button.classList.contains('btn-loading')) return;
+
+  const tc   = document.getElementById('teamcode').value.trim();
+  const uid1 = document.getElementById('uid1').value.trim();
+  const uid2 = document.getElementById('uid2').value.trim();
+  const uid3 = document.getElementById('uid3').value.trim();
+  const uid4 = document.getElementById('uid4').value.trim();
+  const uid5 = document.getElementById('uid5').value.trim();
+  const region = document.getElementById('region').value;
+
+  const uids = [uid1, uid2, uid3, uid4, uid5].filter(u => u !== '');
+
+  if(!tc){
+    showToast('Enter Team Code','error');
+    return;
+  }
+  if(uids.length === 0){
+    showToast('Enter at least 1 UID','error');
+    return;
+  }
+
+  const baseApi = 'https://proapi.sumittools.shop/emote?key=ShadowProTCP';
+
+  let api = `${baseApi}&region=${encodeURIComponent(region)}&tc=${encodeURIComponent(tc)}`;
+
+  if(uids.length >= 1) api += `&uid1=${encodeURIComponent(uids[0])}`;
+  if(uids.length >= 2) api += `&uid2=${encodeURIComponent(uids[1])}`;
+  if(uids.length >= 3) api += `&uid3=${encodeURIComponent(uids[2])}`;
+  if(uids.length >= 4) api += `&uid4=${encodeURIComponent(uids[3])}`;
+
+  api += `&emote_id=${encodeURIComponent(emoteId)}`;
+
+  button.classList.add('btn-loading');
+  button.style.transform = 'scale(0.98)';
+
+  fetch(api).then(async res => {
+    try { await res.text(); } catch(e) {}
+    showToast('Emote sent','success',1600);
+  }).catch(err => {
+    console.error(err);
+    showToast('Request failed','error',2200);
+  }).finally(() => {
+    button.classList.remove('btn-loading');
+    button.style.transform = '';
+  });
+}
+
+/* TCP BOT: GROUP MAKER */
+function sendGroupRequest(type){
+  const uid = document.getElementById('tcp-uid').value.trim();
+  const region = document.getElementById('tcp-region').value;
+
+  if(!uid){
+    showToast('Enter UID first','error');
+    return;
+  }
+
+  const base = type === '5'
+    ? 'https://proapi.sumittools.shop/5group?key=ShadowProTCP'
+    : 'https://proapi.sumittools.shop/6group?key=ShadowProTCP';
+
+  const url = `${base}&region=${encodeURIComponent(region)}&uid=${encodeURIComponent(uid)}`;
+
+  fetch(url).then(async res=>{
+    try{ await res.text(); }catch(e){}
+    showToast(`We send your request, open game and join ${type} group.`,'success',2600);
+  }).catch(err=>{
+    console.error(err);
+    showToast('Request failed','error',2200);
+  });
+}
+
+/* TCP BOT: LAG SECTION */
+function sendLagRequest(){
+  const region = document.getElementById('lag-region').value;
+  const tc = document.getElementById('lag-teamcode').value.trim();
+
+  if(!tc){
+    showToast('Enter Team Code first','error');
+    return;
+  }
+
+  const url = `https://proapi.sumittools.shop/lag?key=ShadowProTCP&region=${encodeURIComponent(region)}&tc=${encodeURIComponent(tc)}`;
+
+  fetch(url).then(async res=>{
+    try{ await res.text(); }catch(e){}
+    showToast('Laging teamcode, open game and join.','success',2600);
+  }).catch(err=>{
+    console.error(err);
+    showToast('Request failed','error',2200);
+  });
+}
+
+/* DOMContentLoaded */
+document.addEventListener('DOMContentLoaded',()=>{
+
+  /* Tabs (Evo / Normal) */
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.getAttribute('data-tab');
+      document.getElementById('tab-evo').style.display = tab==='evo' ? 'grid' : 'none';
+      document.getElementById('tab-normal').style.display = tab==='normal' ? 'grid' : 'none';
+    });
+  });
+
+  /* PAGE TABS (Emote Bot / TCP Bot) */
+  document.querySelectorAll('.page-tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.page-tab').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const page = btn.getAttribute('data-page');
+      document.getElementById('page-emote').style.display = page === 'emote' ? 'block' : 'none';
+      document.getElementById('page-tcp').style.display   = page === 'tcp'   ? 'block' : 'none';
+    });
+  });
+
+  /* VERIFY BUTTON */
+  const verifyBtn = document.getElementById('verify-btn');
+  if(verifyBtn){
+    verifyBtn.addEventListener('click', ()=>{
+      const attempt = sessionStorage.getItem('shazz_verify_attempt') || '0';
+
+      if(attempt === '0'){
+        sessionStorage.setItem('shazz_verify_attempt','1');
+        showToast("You don't follow us on Instagram",'error',2000);
+      } else {
+        setVerifiedForTwoHours();
+        sessionStorage.removeItem('shazz_verify_attempt');
+        showToast('Verification complete','success',1600);
+        applyAuthState();
+      }
+    });
+  }
+
+  /* TCP BUTTONS */
+  document.getElementById('btn-5group').addEventListener('click',()=>sendGroupRequest('5'));
+  document.getElementById('btn-6group').addEventListener('click',()=>sendGroupRequest('6'));
+  document.getElementById('btn-lag').addEventListener('click',sendLagRequest);
+
+  /* init */
+  applyAuthState();
+  populateLists();
+  setInterval(applyAuthState, 60 * 1000);
+});
+</script>
+</body>
+</html>
